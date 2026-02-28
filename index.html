@@ -45,7 +45,7 @@
         <button class="btn-outline" onclick="document.body.classList.toggle('dark')">🌓 Toggle Dark Mode</button>
     </div>
 
-    <textarea id="input" oninput="handleInput()" placeholder="Paste chords here... (Auto-detects chord lines)"></textarea>
+    <textarea id="input" oninput="handleInput()" placeholder="Paste chords here... (Use '>' at the start of a line to force chord detection)"></textarea>
 
     <div class="toolbar">
         <div class="controls-group">
@@ -87,14 +87,12 @@
         processText();
     }
 
-    // Smart Chord Detection: Checks if a line is mostly chords
+    // Smart Chord Detection
     function isChordLine(line) {
         if (line.trim().startsWith('>')) return true;
-        // This regex looks for common chord patterns while ignoring words
         const chordPattern = /\b([A-G][b#]?(2|5|6|7|9|11|13|add|maj|min|m|sus|aug|dim|dim7|m7b5|M7)*(\/[A-G][b#]?)?)\b/g;
         const matches = line.match(chordPattern);
         if (!matches) return false;
-        // If the line is mostly spaces and chords, it's a chord line
         const lineContent = line.replace(chordPattern, "").replace(/\s/g, "");
         return lineContent.length < line.length * 0.3; 
     }
@@ -114,9 +112,8 @@
         const lines = text.split('\n');
         const htmlOutput = lines.map(line => {
             if (isChordLine(line)) {
-                // Remove '>' for display if present, but keep the spacing
-                let content = line.trim().startsWith('>') ? line.substring(1) : line;
-                const transposed = content.replace(/[A-G][b#]?/g, (match) => transposeChord(match, currentOffset));
+                // Modified: We no longer remove the '>' character here
+                const transposed = line.replace(/[A-G][b#]?/g, (match) => transposeChord(match, currentOffset));
                 return `<span class="chord">${transposed}</span>`;
             }
             return line;
@@ -155,3 +152,5 @@
 </script>
 </body>
 </html>
+
+
