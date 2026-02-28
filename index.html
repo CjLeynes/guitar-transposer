@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guitar Transposer + AutoSave</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #eef2f7; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 900px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        textarea { width: 100%; height: 200px; font-family: monospace; padding: 15px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 10px; }
+        .controls { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 25px; border-radius: 8px; white-space: pre; overflow-x: auto; font-size: 1.1rem; border-left: 5px solid #007bff; }
+        .chord { color: #ffcc00; font-weight: bold; }
+        button { padding: 10px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        .btn-danger { background: #dc3545; }
+        .status-msg { font-size: 0.8rem; color: #28a745; margin-left: auto; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Guitar Song App <span style="font-size: 0.5em; vertical-align: middle; color: #666;">(Auto-Saving)</span></h2>
+    
+    <textarea id="input" oninput="handleInput()" placeholder="Type song here... Use '>' for chord lines."></textarea>
+
+    <div class="controls">
+        <button onclick="changeOffset(-1)">-1</button>
+        <button onclick="changeOffset(1)">+1</button>
+        <div id="offsetLabel">Shift: 0</div>
+        <button onclick="toggleAccidental()"># / b</button>
+        <button class="btn-danger" onclick="clearAll()">Clear All</button>
+        <span id="saveStatus" class="status-msg">Saved!</span>
+    </div>
+
+    <pre id="output"></pre>
+</div>
+
+<script>
+    const sharps = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    const flats  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+    const normalize = { "Db":"C#", "Eb":"D#", "Gb":"F#", "Ab":"G#", "Bb":"A#", "Cb":"B", "Fb":"E" };
+
+    let currentOffset = 0;
+    let useFlats = false;
+
+    // 1. LOAD DATA ON STARTUP
+    window.onload = () => {
+        const savedText = localStorage.getItem('guitarSongText');
+        if (savedText) {
+            document.getElementById('input').value = savedText;
+            processText();
+        }
+    };
+
+    function handleInput() {
+        // 2. SAVE DATA ON EVERY KEYSTROKE
+        localStorage.setItem('guitarSongText', document.getElementById('input').value);
+        showSaveStatus();
+        processText();
+    }
+
+    function showSaveStatus() {
+        const status = document.getElementById('saveStatus');
+        status.style.display = 'inline';
+        setTimeout(() => { status.style.display = 'none'; }, 1000);
+    }
+
+    function transposeChord(line, amount) {
+        return line.replace(/[A-G][b#]?/g, (match) => {
+            let root = match;
+            if (normalize[root]) root = normalize[root];
+            let index = sharps.indexOf(root);
+            if (index === -1) return match;
+            let newIndex = (index + amount) % 12;
+            while (newIndex < 0) newIndex += 12;
+            return useFlats ? flats[newIndex] : sharps[newIndex];
+        });
+    }
+
+    function processText() {
+        const text = document.getElementById('input').value;
+        const lines = text.split('\n');
+        const htmlOutput = lines.map(line => {
+            if (line.trim().startsWith('>')) {
+                return `<span class="chord">${transposeChord(line.substring(1), currentOffset)}</span>`;
+            }
+            return line;
+        }).join('\n');
+        document.getElementById('output').innerHTML = htmlOutput || "Ready for music...";
+    }
+
+    function changeOffset(dir) { currentOffset += dir; updateUI(); }
+    function toggleAccidental() { useFlats = !useFlats; updateUI(); }
+    function updateUI() { document.getElementById('offsetLabel').innerText = `Shift: ${currentOffset}`; processText(); }
+    
+    function clearAll() {
+        if(confirm("Delete this song?")) {
+            document.getElementById('input').value = "";
+            localStorage.removeItem('guitarSongText');
+            processText();
+        }
+    }
+</script>
+</body>
+</html>
