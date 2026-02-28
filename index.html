@@ -3,23 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guitar Transposer + AutoSave</title>
+    <title>Smart Guitar Transposer</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #eef2f7; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 900px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        textarea { width: 100%; height: 200px; font-family: monospace; padding: 15px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 10px; }
+        textarea { width: 100%; height: 180px; font-family: monospace; padding: 15px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
         .controls { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        pre { background: #1e1e1e; color: #d4d4d4; padding: 25px; border-radius: 8px; white-space: pre; overflow-x: auto; font-size: 1.1rem; border-left: 5px solid #007bff; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 25px; border-radius: 8px; white-space: pre; overflow-x: auto; font-size: 1.1rem; border-left: 5px solid #007bff; min-height: 100px; }
         .chord { color: #ffcc00; font-weight: bold; }
         button { padding: 10px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        .btn-copy { background: #28a745; }
         .btn-danger { background: #dc3545; }
-        .status-msg { font-size: 0.8rem; color: #28a745; margin-left: auto; display: none; }
+        #offsetLabel { font-weight: bold; background: #eee; padding: 8px 12px; border-radius: 4px; min-width: 80px; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Guitar Song App <span style="font-size: 0.5em; vertical-align: middle; color: #666;">(Auto-Saving)</span></h2>
+    <h2>Guitar Song App</h2>
     
     <textarea id="input" oninput="handleInput()" placeholder="Type song here... Use '>' for chord lines."></textarea>
 
@@ -27,9 +29,9 @@
         <button onclick="changeOffset(-1)">-1</button>
         <button onclick="changeOffset(1)">+1</button>
         <div id="offsetLabel">Shift: 0</div>
-        <button onclick="toggleAccidental()"># / b</button>
-        <button class="btn-danger" onclick="clearAll()">Clear All</button>
-        <span id="saveStatus" class="status-msg">Saved!</span>
+        <button id="toggleBtn" onclick="manualToggle()">Mode: Sharp (#)</button>
+        <button class="btn-copy" onclick="copyToClipboard()">Copy Output</button>
+        <button class="btn-danger" onclick="clearAll()">Clear</button>
     </div>
 
     <pre id="output"></pre>
@@ -43,7 +45,6 @@
     let currentOffset = 0;
     let useFlats = false;
 
-    // 1. LOAD DATA ON STARTUP
     window.onload = () => {
         const savedText = localStorage.getItem('guitarSongText');
         if (savedText) {
@@ -53,16 +54,8 @@
     };
 
     function handleInput() {
-        // 2. SAVE DATA ON EVERY KEYSTROKE
         localStorage.setItem('guitarSongText', document.getElementById('input').value);
-        showSaveStatus();
         processText();
-    }
-
-    function showSaveStatus() {
-        const status = document.getElementById('saveStatus');
-        status.style.display = 'inline';
-        setTimeout(() => { status.style.display = 'none'; }, 1000);
     }
 
     function transposeChord(line, amount) {
@@ -89,10 +82,35 @@
         document.getElementById('output').innerHTML = htmlOutput || "Ready for music...";
     }
 
-    function changeOffset(dir) { currentOffset += dir; updateUI(); }
-    function toggleAccidental() { useFlats = !useFlats; updateUI(); }
-    function updateUI() { document.getElementById('offsetLabel').innerText = `Shift: ${currentOffset}`; processText(); }
-    
+    function changeOffset(dir) {
+        currentOffset += dir;
+        // Logic: If we move to keys like F (-1), Bb (-2), Eb (-3), or Ab (-4), switch to flats.
+        // Otherwise, stay in sharps.
+        const normalizedShift = ((currentOffset % 12) + 12) % 12;
+        const flatKeys = [11, 10, 8, 5, 3, 1]; // F, Bb, Eb, Ab, Db, Gb/B positions
+        useFlats = flatKeys.includes(normalizedShift);
+        
+        updateUI();
+    }
+
+    function manualToggle() {
+        useFlats = !useFlats;
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('offsetLabel').innerText = `Shift: ${currentOffset}`;
+        document.getElementById('toggleBtn').innerText = useFlats ? "Mode: Flat (b)" : "Mode: Sharp (#)";
+        processText();
+    }
+
+    function copyToClipboard() {
+        const textToCopy = document.getElementById('output').innerText;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            alert("Copied to clipboard!");
+        });
+    }
+
     function clearAll() {
         if(confirm("Delete this song?")) {
             document.getElementById('input').value = "";
