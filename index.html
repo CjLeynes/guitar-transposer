@@ -3,83 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chords Transposer</title>
+    <title>Guitar Transposer Pro</title>
     <style>
-        :root { --mono: 'Consolas', 'Monaco', 'Courier New', monospace; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 1000px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        
-        textarea, pre { 
-            font-family: var(--mono) !important; 
-            font-size: 16px;
-            white-space: pre; 
-            line-height: 1.5;
-            tab-size: 4;
+        :root { 
+            --mono: 'Consolas', 'Monaco', 'Courier New', monospace;
+            --bg: #f4f4f4;
+            --card: #ffffff;
+            --text: #333333;
+            --primary: #ffc107; /* Ultimate Guitar Yellow */
         }
-
-        textarea { width: 100%; height: 250px; padding: 15px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 15px; box-sizing: border-box; }
-        .controls { margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6; }
+        body.dark {
+            --bg: #1a1a1a;
+            --card: #2d2d2d;
+            --text: #eeeeee;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 20px; transition: 0.3s; }
+        .container { width: 100%; max-width: 1100px; margin: auto; background: var(--card); padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
-        .output-header { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 10px; }
-        pre { background: #1e1e1e; color: #d4d4d4; padding: 25px; border-radius: 8px; overflow-x: auto; border-left: 5px solid #28a745; margin: 0; min-height: 50px; }
-        .chord { color: #ffcc00; font-weight: bold; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
         
-        button { padding: 10px 18px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; }
-        button:hover { background: #218838; }
-        .btn-blue { background: #007bff; }
-        .btn-blue:hover { background: #0069d9; }
+        textarea { width: 100%; height: 200px; font-family: var(--mono); padding: 15px; border: 1px solid #ccc; border-radius: 4px; background: var(--card); color: var(--text); box-sizing: border-box; font-size: 14px; }
         
-        .btn-toggle { background: #495057; color: #fff; border: 2px solid #343a40; }
-        .btn-toggle:hover { background: #343a40; }
+        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 20px 0; background: rgba(0,0,0,0.05); padding: 15px; border-radius: 6px; }
         
-        #offsetLabel { font-weight: bold; min-width: 100px; text-align: center; font-size: 0.9rem; color: #495057; }
-        .section-title { font-weight: bold; color: #333; margin-bottom: 5px; }
-        .small-btn { padding: 5px 12px; font-size: 14px; background: #28a745; }
+        pre { background: #000; color: #fff; padding: 25px; border-radius: 6px; overflow-x: auto; font-family: var(--mono); font-size: 16px; line-height: 1.6; min-height: 100px; }
+        .chord { color: var(--primary); font-weight: bold; }
+        
+        button { padding: 8px 16px; cursor: pointer; background: var(--primary); color: #000; border: none; border-radius: 4px; font-weight: bold; font-size: 14px; }
+        button:hover { filter: brightness(1.1); }
+        .btn-outline { background: transparent; border: 1px solid var(--text); color: var(--text); }
+        
+        .controls-group { display: flex; align-items: center; gap: 8px; border-right: 1px solid #ccc; padding-right: 15px; }
+        #offsetLabel { font-weight: bold; min-width: 80px; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Guitar Transposer</h2>
-    
-    <div class="section-title">Input Song:</div>
-    <textarea id="input" oninput="handleInput()" placeholder="Paste song here... Use '>' for chord lines."></textarea>
-
-    <div class="controls">
-        <button type="button" onclick="changeOffset(-1)">-1</button>
-        <button type="button" onclick="changeOffset(1)">+1</button>
-        <div id="offsetLabel">Original Key</div>
-        
-        <button type="button" id="toggleBtn" class="btn-toggle" onclick="manualToggle()">Display as: Flats (b)</button>
-        
-        <button type="button" class="btn-blue" style="margin-left: auto;" onclick="copyToClipboard()">Copy Result</button>
+    <div class="header">
+        <h1 style="margin:0;">Guitar Transposer Pro</h1>
+        <button class="btn-outline" onclick="document.body.classList.toggle('dark')">🌓 Toggle Dark Mode</button>
     </div>
 
-    <div class="output-header">
-        <div class="section-title">Transposed Output:</div>
-        <div>
-            <span style="font-size: 0.8rem; margin-right: 5px; color: #666;">Fine-tune output:</span>
-            <button type="button" class="small-btn" onclick="changeOffset(-1)">-</button>
-            <button type="button" class="small-btn" onclick="changeOffset(1)">+</button>
+    <textarea id="input" oninput="handleInput()" placeholder="Paste chords here... (Auto-detects chord lines)"></textarea>
+
+    <div class="toolbar">
+        <div class="controls-group">
+            <span>Transpose:</span>
+            <button onclick="changeOffset(-1)">-</button>
+            <div id="offsetLabel">0</div>
+            <button onclick="changeOffset(1)">+</button>
         </div>
+
+        <div class="controls-group">
+            <span>Mode:</span>
+            <button id="toggleBtn" class="btn-outline" onclick="manualToggle()">Flats (b)</button>
+        </div>
+
+        <button onclick="copyToClipboard()" style="margin-left: auto; background: #28a745; color: white;">Copy Result</button>
+        <button onclick="clearAll()" style="background: #dc3545; color: white;">Clear</button>
     </div>
+
+    <div style="font-weight: bold; margin-bottom: 10px;">Output:</div>
     <pre id="output"></pre>
 </div>
 
 <script>
     const sharps = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     const flats  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
-    const normalize = { "Db":"C#", "Eb":"D#", "Gb":"F#", "Ab":"G#", "Bb":"A#", "Cb":"B", "Fb":"E", "E#":"F", "B#":"C" };
+    const normalize = { "Db":"C#", "Eb":"D#", "Gb":"F#", "Ab":"G#", "Bb":"A#", "Cb":"B", "Fb":"E" };
 
     let currentOffset = 0;
     let useFlats = true;
 
-    // Initialize
     window.onload = () => {
         const savedText = localStorage.getItem('guitarSongText');
-        if (savedText) {
-            document.getElementById('input').value = savedText;
-        }
+        if (savedText) document.getElementById('input').value = savedText;
         processText();
     };
 
@@ -88,37 +87,41 @@
         processText();
     }
 
-    function transposeChordLine(line, amount) {
-        return line.replace(/[A-G][b#]?[^\s/]*(\/[A-G][b#]?[^\s]*)?/g, (match) => {
-            return match.split('/').map(part => {
-                return part.replace(/[A-G][b#]?/, (note) => {
-                    let root = note;
-                    if (normalize[root]) root = normalize[root];
-                    let index = sharps.indexOf(root);
-                    if (index === -1) return note;
-                    let newIndex = (index + amount) % 12;
-                    while (newIndex < 0) newIndex += 12;
-                    return useFlats ? flats[newIndex] : sharps[newIndex];
-                });
-            }).join('/');
-        });
+    // Smart Chord Detection: Checks if a line is mostly chords
+    function isChordLine(line) {
+        if (line.trim().startsWith('>')) return true;
+        // This regex looks for common chord patterns while ignoring words
+        const chordPattern = /\b([A-G][b#]?(2|5|6|7|9|11|13|add|maj|min|m|sus|aug|dim|dim7|m7b5|M7)*(\/[A-G][b#]?)?)\b/g;
+        const matches = line.match(chordPattern);
+        if (!matches) return false;
+        // If the line is mostly spaces and chords, it's a chord line
+        const lineContent = line.replace(chordPattern, "").replace(/\s/g, "");
+        return lineContent.length < line.length * 0.3; 
+    }
+
+    function transposeChord(note, amount) {
+        let root = note;
+        if (normalize[root]) root = normalize[root];
+        let index = sharps.indexOf(root);
+        if (index === -1) return note;
+        let newIndex = (index + amount) % 12;
+        while (newIndex < 0) newIndex += 12;
+        return useFlats ? flats[newIndex] : sharps[newIndex];
     }
 
     function processText() {
-        const input = document.getElementById('input');
-        const output = document.getElementById('output');
-        if (!input || !output) return;
-
-        const text = input.value;
+        const text = document.getElementById('input').value;
         const lines = text.split('\n');
         const htmlOutput = lines.map(line => {
-            if (line.trim().startsWith('>')) {
-                return `<span class="chord">${transposeChordLine(line, currentOffset)}</span>`;
+            if (isChordLine(line)) {
+                // Remove '>' for display if present, but keep the spacing
+                let content = line.trim().startsWith('>') ? line.substring(1) : line;
+                const transposed = content.replace(/[A-G][b#]?/g, (match) => transposeChord(match, currentOffset));
+                return `<span class="chord">${transposed}</span>`;
             }
             return line;
         }).join('\n');
-        
-        output.innerHTML = htmlOutput || "Your transposed song will appear here...";
+        document.getElementById('output').innerHTML = htmlOutput || "Waiting for input...";
     }
 
     function changeOffset(dir) {
@@ -132,22 +135,23 @@
     }
 
     function updateUI() {
-        const label = document.getElementById('offsetLabel');
-        const toggleBtn = document.getElementById('toggleBtn');
-        
-        if (label) label.innerText = currentOffset === 0 ? "Original Key" : `Shifted: ${currentOffset}`;
-        if (toggleBtn) toggleBtn.innerText = useFlats ? "Display as: Flats (b)" : "Display as: Sharps (#)";
-        
+        document.getElementById('offsetLabel').innerText = currentOffset;
+        document.getElementById('toggleBtn').innerText = useFlats ? "Flats (b)" : "Sharps (#)";
         processText();
     }
 
     function copyToClipboard() {
         const text = document.getElementById('output').innerText;
-        navigator.clipboard.writeText(text).then(() => {
-            alert("Copied to clipboard!");
-        });
+        navigator.clipboard.writeText(text).then(() => alert("Copied!"));
+    }
+
+    function clearAll() {
+        if(confirm("Clear everything?")) {
+            document.getElementById('input').value = "";
+            localStorage.removeItem('guitarSongText');
+            processText();
+        }
     }
 </script>
 </body>
 </html>
-
