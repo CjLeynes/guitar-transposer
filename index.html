@@ -3,35 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Guitar Transposer</title>
+    <title>Fixed Spacing Transposer</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #eef2f7; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 900px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        textarea { width: 100%; height: 180px; font-family: monospace; padding: 15px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
-        .controls { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        pre { background: #1e1e1e; color: #d4d4d4; padding: 25px; border-radius: 8px; white-space: pre; overflow-x: auto; font-size: 1.1rem; border-left: 5px solid #007bff; min-height: 100px; }
+        :root { --mono: 'Consolas', 'Monaco', 'Courier New', monospace; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 1000px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        
+        /* THE CRITICAL PART: Force identical font and spacing */
+        textarea, pre { 
+            font-family: var(--mono) !important; 
+            font-variant-ligatures: none;
+            white-space: pre; 
+            word-spacing: normal;
+            letter-spacing: 0px;
+        }
+
+        textarea { width: 100%; height: 250px; padding: 15px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 15px; box-sizing: border-box; overflow-x: auto; }
+        .controls { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px; }
+        
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 25px; border-radius: 8px; overflow-x: auto; line-height: 1.5; border-left: 5px solid #28a745; position: relative; }
         .chord { color: #ffcc00; font-weight: bold; }
-        button { padding: 10px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; }
-        button:hover { background: #0056b3; }
-        .btn-copy { background: #28a745; }
-        .btn-danger { background: #dc3545; }
-        #offsetLabel { font-weight: bold; background: #eee; padding: 8px 12px; border-radius: 4px; min-width: 80px; text-align: center; }
+        
+        button { padding: 10px 18px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; }
+        #offsetLabel { font-weight: bold; min-width: 100px; text-align: center; }
+        .size-control { display: flex; align-items: center; gap: 5px; margin-left: auto; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Guitar Song App</h2>
+    <h2>Guitar Transposer (Fixed Spacing)</h2>
     
-    <textarea id="input" oninput="handleInput()" placeholder="Type song here... Use '>' for chord lines."></textarea>
+    <textarea id="input" oninput="handleInput()" placeholder="Paste from Google Docs here..."></textarea>
 
     <div class="controls">
         <button onclick="changeOffset(-1)">-1</button>
         <button onclick="changeOffset(1)">+1</button>
-        <div id="offsetLabel">Shift: 0</div>
-        <button id="toggleBtn" onclick="manualToggle()">Mode: Sharp (#)</button>
-        <button class="btn-copy" onclick="copyToClipboard()">Copy Output</button>
-        <button class="btn-danger" onclick="clearAll()">Clear</button>
+        <div id="offsetLabel">Original Key</div>
+        <button style="background:#007bff" onclick="copyToClipboard()">Copy Result</button>
+        
+        <div class="size-control">
+            <small>Font Size:</small>
+            <input type="range" min="10" max="24" value="16" oninput="updateFontSize(this.value)">
+        </div>
     </div>
 
     <pre id="output"></pre>
@@ -53,20 +67,29 @@
         }
     };
 
+    function updateFontSize(val) {
+        document.getElementById('input').style.fontSize = val + 'px';
+        document.getElementById('output').style.fontSize = val + 'px';
+    }
+
     function handleInput() {
         localStorage.setItem('guitarSongText', document.getElementById('input').value);
         processText();
     }
 
-    function transposeChord(line, amount) {
-        return line.replace(/[A-G][b#]?/g, (match) => {
-            let root = match;
-            if (normalize[root]) root = normalize[root];
-            let index = sharps.indexOf(root);
-            if (index === -1) return match;
-            let newIndex = (index + amount) % 12;
-            while (newIndex < 0) newIndex += 12;
-            return useFlats ? flats[newIndex] : sharps[newIndex];
+    function transposeChordLine(line, amount) {
+        return line.replace(/[A-G][b#]?[^\s/]*(\/[A-G][b#]?[^\s]*)?/g, (match) => {
+            return match.split('/').map(part => {
+                return part.replace(/[A-G][b#]?/, (note) => {
+                    let root = note;
+                    if (normalize[root]) root = normalize[root];
+                    let index = sharps.indexOf(root);
+                    if (index === -1) return note;
+                    let newIndex = (index + amount) % 12;
+                    while (newIndex < 0) newIndex += 12;
+                    return useFlats ? flats[newIndex] : sharps[newIndex];
+                });
+            }).join('/');
         });
     }
 
@@ -75,48 +98,32 @@
         const lines = text.split('\n');
         const htmlOutput = lines.map(line => {
             if (line.trim().startsWith('>')) {
-                return `<span class="chord">${transposeChord(line.substring(1), currentOffset)}</span>`;
+                // We keep the exact character count by transposing 
+                // but preserving leading/trailing spaces
+                const content = line.substring(1);
+                return `<span class="chord">${transposeChordLine(content, currentOffset)}</span>`;
             }
             return line;
         }).join('\n');
-        document.getElementById('output').innerHTML = htmlOutput || "Ready for music...";
+        document.getElementById('output').innerHTML = htmlOutput || "Paste your song...";
     }
 
     function changeOffset(dir) {
         currentOffset += dir;
-        // Logic: If we move to keys like F (-1), Bb (-2), Eb (-3), or Ab (-4), switch to flats.
-        // Otherwise, stay in sharps.
         const normalizedShift = ((currentOffset % 12) + 12) % 12;
-        const flatKeys = [11, 10, 8, 5, 3, 1]; // F, Bb, Eb, Ab, Db, Gb/B positions
+        const flatKeys = [1, 3, 5, 6, 8, 10, 11]; 
         useFlats = flatKeys.includes(normalizedShift);
-        
-        updateUI();
-    }
-
-    function manualToggle() {
-        useFlats = !useFlats;
         updateUI();
     }
 
     function updateUI() {
-        document.getElementById('offsetLabel').innerText = `Shift: ${currentOffset}`;
-        document.getElementById('toggleBtn').innerText = useFlats ? "Mode: Flat (b)" : "Mode: Sharp (#)";
+        document.getElementById('offsetLabel').innerText = currentOffset === 0 ? "Original Key" : `Shift: ${currentOffset}`;
         processText();
     }
 
     function copyToClipboard() {
-        const textToCopy = document.getElementById('output').innerText;
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            alert("Copied to clipboard!");
-        });
-    }
-
-    function clearAll() {
-        if(confirm("Delete this song?")) {
-            document.getElementById('input').value = "";
-            localStorage.removeItem('guitarSongText');
-            processText();
-        }
+        const text = document.getElementById('output').innerText;
+        navigator.clipboard.writeText(text).then(() => { alert("Copied!"); });
     }
 </script>
 </body>
